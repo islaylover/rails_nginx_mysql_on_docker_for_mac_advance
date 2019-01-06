@@ -1,0 +1,73 @@
+# Set up Ruby on Rails 5.2 (- puma -) + Nginx + Mysql 8.0 environment on Mac with self-signed certificates
+#
+# Step 1 Exec one-time command  [rails new] after starting new containers with configuration defined in docker-compose.yml [app] 
+# and remove container after exec command
+#  docker-compose run --rm app rails new . --force --database=mysql --skip-bundle
+# 
+# Step 2 Change database setting in local file
+#  vi rails_app/config/database.yml (host: from 'localhost' to 'db', password: from empty to 'password')
+#
+# Step 3 Build service images defined in yml
+#  docker-compose build --no-cache
+#
+# Step 4 DB migration for rails project in rails container
+# docker-compose run --rm app rails db:create
+#
+# Step 5 Builds, (re)creates, starts, and attaches to containers for a service.
+# docker-compose up -d
+#
+# Step 6 Check site
+# Access to http://localhost and check if "Yay! You’re on Rails!" phrase appears
+# Access to https://localhost and check if "Yay! You’re on Rails!" phrase appears
+#
+# Note safari on mac does not permit access to site with self-signed certificates
+# You can manage to fix this problem! See the site below.
+#  https://qiita.com/suin/items/be87a7a581f30b38c5f7
+#  https://tosbourn.com/getting-os-x-to-trust-self-signed-ssl-certificates/
+
+version: '3'
+services:
+  # -- Mysql service --
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    # mount local folder [./db_data]
+    volumes:
+      - ./db_data:/var/lib/mysql
+    # define value for container
+    environment:
+      # define root password
+      MYSQL_ROOT_PASSWORD: password
+    # define host's port and container's port for mac mysql client application
+    # sudo lsof -i:13306 [check command if port is not used]
+    ports:
+      - 13306:3306
+  # -- Rails service --
+  app:
+    build:
+      context: .
+      dockerfile: ./rails_app/Dockerfile
+    volumes:
+      - ./rails_app:/var/www/rails_app
+    environment:
+      - RAILS_ENV=development
+      - TZ=Asia/Tokyo
+    depends_on:
+      - db
+  # -- Nginx service --
+  web:
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    environment:
+      - TZ=Asia/Tokyo
+    volumes:
+      # log directory
+      - ./log:/var/log/nginx
+      # document root directory
+	# Expose ports. Mapping ports in the HOST:CONTAINER
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
