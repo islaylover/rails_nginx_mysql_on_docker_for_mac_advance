@@ -65,7 +65,7 @@ services:
       # log directory
       - ./log:/var/log/nginx
       # document root directory
-	# Expose ports. Mapping ports in the HOST:CONTAINER
+    # Expose ports. Mapping ports in the HOST:CONTAINER
     ports:
       - "80:80"
       - "443:443"
